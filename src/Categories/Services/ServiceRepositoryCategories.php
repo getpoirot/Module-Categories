@@ -1,8 +1,7 @@
 <?php
 namespace Module\Categories\Services;
 
-use Module\Categories\Model\RepositoryCategories;
-
+use Module\Categories\Model\Repository;
 use Module\MongoDriver\MongoDriverManagementFacade;
 
 use Poirot\Application\aSapi;
@@ -39,7 +38,7 @@ class ServiceRepositoryCategories
         /** @var MongoDriverManagementFacade $mongoDriver */
         $mongoDriver   = $services->get('/modules/mongoDriver');
         $db            = $mongoDriver->query($mongoClient);
-        $categoriesRepo = new RepositoryCategories($db, $mongoCollection);
+        $categoriesRepo = new Repository\Categories($db, $mongoCollection);
         return $categoriesRepo;
     }
 }
