@@ -22,13 +22,56 @@ class Categories extends aRepository
     /**
      * Adds new category
      *
-     * @param Category $category The category instance
+     * @param array|\Traversable $data   DataStruct of category fields
+     * @param Category           $parent The parent category instance
      *
      * @return Category Inserted category
+     * @throws \Exception
      */
-    function add(Category $category)
+    function insert($data, Category $parent = null)
     {
-        // TODO: Implement add() method.
+        if (!(is_array($data) || $data instanceof \Traversable))
+            throw new \InvalidArgumentException(sprintf(
+                'Invalid Data Struct Provided. given: (%s).'
+                , \Poirot\Std\flatten($data)
+            ));
+
+        if ($parent) {
+            $leftId  = $parent->{Category::Right};
+            $rightId = $leftId + 1;
+        } else {
+            /** @var Category $rootCat */
+            $rootCat = $this->_query()->findOne([], ['sort' => [Category::Right => -1]]);
+            $leftId  = 1;
+            $rightId = (($rootCat) ? $rootCat->{Category::Right} : 1) + 1;
+        }
+
+        $this->_query()->updateMany(
+            [ Category::Right => ['$gte' => $leftId] ]
+            , [
+                '$inc' => [ Category::Right => 2 ],
+            ]
+        );
+
+        $this->_query()->updateMany(
+            [ Category::Left => ['$gte' => $leftId] ]
+            , [
+                '$inc' => [ Category::Left => 2 ],
+            ]
+        );
+
+        $newCategory = new Category($data);
+        $newCategory->{Category::Parent} = $parent ? $parent->{Category::ID} : 0;
+        $newCategory->{Category::Left}   = $leftId;
+        $newCategory->{Category::Right}  = $rightId;
+
+        if (!$newCategory->isFulfilled())
+            throw new \Exception('Category Options not fullFilled.');
+
+        $r = $this->_query()->insertOne($newCategory);
+        $newCategory->{Category::ID} = $r->getInsertedId();
+
+        return $newCategory;
     }
 
     /**
@@ -36,11 +79,52 @@ class Categories extends aRepository
      *
      * @param Category $category The category instance
      *
-     * @return void
+     * @return int Deleted Count
      */
     function delete(Category $category)
     {
-        // TODO: Implement delete() method.
+        $r = $this->_query()->deleteOne([
+            Category::ID => $category->{Category::ID}
+        ]);
+        
+        $this->_query()->updateMany(
+            [ Category::Parent => $category->{Category::ID} ]
+            , [ 
+                '$set' => [ Category::Parent => $category->{Category::Parent}] 
+            ]
+        );
+
+        $this->_query()->updateMany(
+            [
+                Category::Left  => ['$gte' => $category->{Category::Left}],
+                Category::Right => ['$lte' => $category->{Category::Right}],
+            ]
+            , [
+                '$inc'=> [Category::Left  => -1, Category::Right => -1],
+            ]
+        );
+
+
+        $this->_query()->updateMany(
+            [
+                Category::Left => ['$gt' => $category->{Category::Right}],
+            ]
+            , [
+                '$inc'=> [Category::Left => -2],
+            ]
+        );
+
+        $this->_query()->updateMany(
+            [
+                Category::Right => ['$gt' => $category->{Category::Right}],
+            ]
+            , [
+                '$inc'=> [Category::Right => -2]
+            ]
+        );
+
+
+        return $r->getDeletedCount();
     }
 
     /**
@@ -48,11 +132,19 @@ class Categories extends aRepository
      *
      * @param string $slugID
      *
-     * @return Category|null
+     * @return Category
+     * @throws \Exception
      */
     function findByID($slugID)
     {
-        // TODO: Implement findByID() method.
+        $r = $this->_query()->findOne([
+            Category::ID  => $slugID,
+        ]);
+
+        if (!$r)
+            throw new \RuntimeException(sprintf('Category with slug name (%s) not found.', $slugID));
+
+        return $r;
     }
 
     /**
@@ -60,11 +152,16 @@ class Categories extends aRepository
      *
      * @param Category $category The category instance
      *
-     * @return Category[]
+     * @return \Traversable[Category]
      */
     function getParents(Category $category)
     {
-        // TODO: Implement getParents() method.
+        $r = $this->_query()->find([
+            Category::Left  => ['$lt' => $category->{Category::Left}],
+            Category::Right => ['$gt' => $category->{Category::Right}],
+        ], ['sort' => [Category::Left => 1]]);
+
+        return $r;
     }
 
     /**
@@ -72,10 +169,54 @@ class Categories extends aRepository
      *
      * @param Category $root The root category
      *
-     * @return Category[]
+     * … Array(1) …
+     *   food Array(3) … ROOT
+     *     food Object => Module\Categories\Model\Category DETAIL key with same name as root
+     *     DESCENDANT
+     *     fruit Array(3) …
+     *     meat Array(3) … - Sorted
+     *
+     * @return array
      */
     function getTree(Category $root = null)
     {
-        // TODO: Implement getTree() method.
+        if ($root) {
+            $r = $this->_query()->find([
+                '$or' => [
+                    [ Category::ID => $root->{Category::ID} ],
+                    [
+                        Category::Left  => ['$gt' => $root->{Category::Left}],
+                        Category::Right => ['$lt' => $root->{Category::Right}],
+                    ]
+                ],
+            ], ['sort' => [Category::Left => 1]]);
+        } else {
+            $r = $this->_query()->find([], ['sort' => [Category::Left => 1]]);
+        }
+
+        $tree  = [];
+        $stack = [];
+        foreach ($r as $c)
+        {
+            /** @var Category $c */
+            while(1) {
+                $sid = end($stack);
+                if (!$sid || ($sid && $c->{Category::Right} < $sid->{Category::Right}))
+                    break;
+
+                array_pop($stack);
+            }
+
+            array_push($stack, $c);
+
+
+            $p = &$tree;
+            foreach ($stack as $s)
+                $p = &$p[$s->{Category::ID}];
+
+            $p[$c->{Category::ID}] = $c;
+        }
+
+        return $tree;
     }
 }
