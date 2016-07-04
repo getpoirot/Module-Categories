@@ -8,6 +8,14 @@ use Poirot\Application\aSapi;
 use Poirot\Ioc\Container\Service\aServiceContainer;
 use Poirot\Std\Struct\DataEntity;
 
+/*
+$categories = $services->fresh(
+    '/modules/categories/services/repository/categories'
+    , ['db_collection' => 'trades.categories'] // override options
+);
+$r = $categories->getTree($categories->findByID('red'));
+*/
+
 class ServiceRepositoryCategories 
     extends aServiceContainer
 {
@@ -22,23 +30,47 @@ class ServiceRepositoryCategories
     function newService()
     {
         $services    = $this->services();
-        
+
+        $this->__prepareOptions();
+
+        /** @var MongoDriverManagementFacade $mongoDriver */
+        $mongoDriver   = $services->get('/modules/mongoDriver');
+        $db            = $mongoDriver->query($this->optsData()->getMongoClient());
+        $categoriesRepo = new Repository\Categories($db, $this->optsData()->getDbCollection());
+        return $categoriesRepo;
+    }
+
+    /**
+     * Retrieve and merge options from application merged config
+     * @throws \Exception
+     */
+    protected function __prepareOptions()
+    {
+        $services    = $this->services();
+
         /** @var aSapi $config */
         $config       = $services->get('/sapi');
         $config       = $config->config();
         /** @var DataEntity $config */
         $config       = $config->get(\Module\Categories\Module::CONF_KEY, array());
-        
-        $mongoClient     = (isset($config['mongo_client'])) ? $config['mongo_client'] 
-            : MongoDriverManagementFacade::CLIENT_DEFAULT; 
-        
-        $mongoCollection = (isset($config['db_collection'])) ? $config['db_collection']
-            : 'categories';
 
-        /** @var MongoDriverManagementFacade $mongoDriver */
-        $mongoDriver   = $services->get('/modules/mongoDriver');
-        $db            = $mongoDriver->query($mongoClient);
-        $categoriesRepo = new Repository\Categories($db, $mongoCollection);
-        return $categoriesRepo;
+        if (!$this->optsData()->getMongoClient()) {
+            $mongoClient = (isset($config['mongo_client']))
+                ? $config['mongo_client']
+                : MongoDriverManagementFacade::CLIENT_DEFAULT;
+
+            $this->optsData()->setMongoClient($mongoClient);
+        }
+
+        if (!$this->optsData()->getDbCollection()) {
+            $mongoCollection = (isset($config['db_collection']))
+                ? $config['db_collection']
+                : null;
+
+            if (!$mongoCollection)
+                throw new \Exception('DB Collection name for categories not defined.');
+
+            $this->optsData()->setDbCollection($mongoCollection);
+        }
     }
 }
