@@ -29,12 +29,12 @@ class ServiceRepositoryCategories
      */
     function newService()
     {
-        $services    = $this->services();
+        $services = $this->services();
 
         $this->__prepareOptions();
 
         /** @var MongoDriverManagementFacade $mongoDriver */
-        $mongoDriver   = $services->get('/modules/mongoDriver');
+        $mongoDriver   = $services->get('/module/mongoDriver');
         $db            = $mongoDriver->query($this->optsData()->getMongoClient());
         $categoriesRepo = new Repository\Categories($db, $this->optsData()->getDbCollection());
         return $categoriesRepo;
