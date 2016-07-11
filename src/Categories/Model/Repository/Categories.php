@@ -26,7 +26,7 @@ class Categories extends aRepository
      * @param Category           $parent The parent category instance
      *
      * @return Category Inserted category
-     * @throws \Exception
+     * @throws \Exception Data fields not fulfilled
      */
     function insert($data, Category $parent = null)
     {
