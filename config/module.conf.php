@@ -1,13 +1,16 @@
 <?php
 return array(
-    \Module\Categories\Module::CONF_KEY 
-        => array(
-            \Module\MongoDriver\Services\aServiceRepository::CONF_KEY => array(
-                 'client' => \Module\MongoDriver\MongoDriverManagementFacade::CLIENT_DEFAULT,
-                 'collection' => array(
-                    'name'    => 'categories',
-                    'indexes' => array()
-                 )
+    Module\MongoDriver\Module::CONF_KEY => array(
+        \Module\Categories\Services\ServiceRepositoryCategories::CONF_KEY => array(
+            'collections' => array(
+                // query on which collection
+                'categories' => array(
+                    // which client to connect and query with
+                    'client' => \Module\MongoDriver\MongoDriverManagementFacade::CLIENT_DEFAULT,
+                    // ensure indexes
+                    'indexes' => array( )
+                ),
             ),
         ),
+    ),
 );
