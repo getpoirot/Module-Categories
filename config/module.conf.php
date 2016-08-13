@@ -11,7 +11,7 @@ return array(
                     // query on which collection
                     'name' => 'categories',
                     // which client to connect and query with
-                    'client' => \Module\MongoDriver\MongoDriverManagementFacade::CLIENT_DEFAULT,
+                    'client' => \Module\MongoDriver\Module\MongoDriverManagementFacade::CLIENT_DEFAULT,
                     // ensure indexes
                     'indexes' => array( )
                 ),
