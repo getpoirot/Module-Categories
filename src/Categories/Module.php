@@ -9,14 +9,14 @@ use Poirot\Loader\Autoloader\LoaderAutoloadNamespace;
 use Poirot\Loader\Interfaces\iLoaderAutoload;
 use Poirot\Std\Interfaces\Struct\iDataEntity;
 
-use Poirot\Application\Sapi;
+use Poirot\Application\Interfaces\Sapi;
 use Poirot\Application\Interfaces\Sapi\iSapiModule;
 
 class Module implements iSapiModule
-    , Sapi\Module\Feature\FeatureModuleAutoload
-    , Sapi\Module\Feature\FeatureModuleInitModuleManager
-    , Sapi\Module\Feature\FeatureModuleMergeConfig
-    , Sapi\Module\Feature\FeatureModuleNestServices
+    , Sapi\Module\Feature\iFeatureModuleAutoload
+    , Sapi\Module\Feature\iFeatureModuleInitModuleManager
+    , Sapi\Module\Feature\iFeatureModuleMergeConfig
+    , Sapi\Module\Feature\iFeatureModuleNestServices
 {
     CONST CONF_KEY = 'module.categories';
 
