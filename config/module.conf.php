@@ -1,7 +1,7 @@
 <?php
 return array(
     Module\MongoDriver\Module::CONF_KEY => array(
-        'repositories' => array(
+        \Module\MongoDriver\Services\aServiceRepository::CONF_KEY => array(
             // Configuration of Repository Service.
             // Usually Implemented with modules that implement mongo usage
             // with specific key name as repo name.
